@@ -6,13 +6,10 @@ import {
   FaChartBar,
   FaCog,
   FaSignOutAlt,
-  FaCalendarAlt,
-  FaClock,
   FaBars,
 } from "react-icons/fa";
 import { useRouter } from 'next/navigation';
 import { useState } from "react";
-import Link from "next/link";
 
 export default function Sidebar({ selectedTab, setSelectedTab }) {
   const router = useRouter();

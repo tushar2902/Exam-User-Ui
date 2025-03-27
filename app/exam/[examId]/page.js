@@ -1,196 +1,245 @@
-// app/exam/[examId]/page.js
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import CodingSection from "@/app/components/coding-section";
 
 export default function Exam() {
   const router = useRouter();
   const { examId } = useParams();
   const [exam, setExam] = useState(null);
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
-  const [timeLeft, setTimeLeft] = useState(0);
-  const examContainerRef = useRef(null);
+  const [markedForReview, setMarkedForReview] = useState({});
+  const [timeLeft, setTimeLeft] = useState(1500); // 25 minutes in seconds
 
   useEffect(() => {
     if (examId) {
       const mockExam = {
-        id: examId,
-        name: "Sample Exam",
-        questions: [
+        sections: [
           {
-            id: 1,
-            text: "What is 2 + 2?",
-            options: ["3", "4", "5", "6"],
-            correctAnswer: "4",
+            title: "MCQs",
+            questions: [
+              {
+                id: 1,
+                text: "Distance between two shafts shall not be less than ______?",
+                options: ["7 M", "10.5 M", "13.5 M", "15.5 M", "18.5 M"],
+              },
+              {
+                id: 2,
+                text: "What is the capital of France?",
+                options: ["Berlin", "Madrid", "Paris", "Rome"],
+              },
+              {
+                id: 3,
+                text: "Who developed the Theory of Relativity?",
+                options: ["Newton", "Einstein", "Galileo", "Tesla"],
+              },
+            ],
           },
           {
-            id: 2,
-            text: "What is the capital of France?",
-            options: ["Berlin", "Madrid", "Paris", "Rome"],
-            correctAnswer: "Paris",
+            title: "Coding",
+            questions: [
+              {
+                id: 4,
+                text: "Write a function to reverse a string in JavaScript.",
+              },
+              {
+                id: 5,
+                text: "Implement a function to find the factorial of a given number in Python.",
+              },
+            ],
           },
         ],
-        duration: 3600,
       };
-
       setExam(mockExam);
-      setTimeLeft(mockExam.duration);
     }
   }, [examId]);
 
   useEffect(() => {
-    if (timeLeft > 0 && exam) {
-      const timer = setInterval(() => {
-        setTimeLeft((prevTime) => prevTime - 1);
-      }, 1000);
-
+    if (timeLeft > 0) {
+      const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
       return () => clearInterval(timer);
-    } else if (exam && timeLeft === 0) {
+    } else {
       submitExam();
     }
-  }, [timeLeft, exam]);
-
-  useEffect(() => {
-    const enterFullscreen = () => {
-      if (examContainerRef.current) {
-        const container = examContainerRef.current;
-        if (container.requestFullscreen) {
-          container.requestFullscreen();
-        } else if (container.mozRequestFullScreen) {
-          container.mozRequestFullScreen();
-        } else if (container.webkitRequestFullscreen) {
-          container.webkitRequestFullscreen();
-        } else if (container.msRequestFullscreen) {
-          container.msRequestFullscreen();
-        }
-      }
-    };
-
-    enterFullscreen();
-
-    const handleFullscreenChange = () => {
-      if (document.fullscreenElement === null && timeLeft > 0) {
-        submitExam();
-      }
-    };
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape" && timeLeft > 0) {
-        submitExam();
-      }
-    };
-
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    document.addEventListener("keydown", handleKeyDown);
-
-    return () => {
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
   }, [timeLeft]);
 
-  useEffect(() => {
-    if (examContainerRef.current) {
-      examContainerRef.current.style.cursor = "none";
-    }
-
-    return () => {
-      if (examContainerRef.current) {
-        examContainerRef.current.style.cursor = "auto";
-      }
-    };
-  }, []);
-
-  if (!exam) {
-    return <div className="p-6 bg-gray-100 min-h-screen">Loading...</div>;
-  }
-
-  const currentQuestion = exam.questions[currentQuestionIndex];
-
   const handleAnswerChange = (answer) => {
-    setAnswers({ ...answers, [currentQuestion.id]: answer });
+    setAnswers({
+      ...answers,
+      [`${currentSectionIndex}-${currentQuestionIndex}`]: answer,
+    });
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < exam.questions.length - 1) {
+    const currentSection = exam.sections[currentSectionIndex];
+    if (currentQuestionIndex < currentSection.questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else if (currentSectionIndex < exam.sections.length - 1) {
+      setCurrentSectionIndex(currentSectionIndex + 1);
+      setCurrentQuestionIndex(0);
     }
   };
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
+    } else if (currentSectionIndex > 0) {
+      setCurrentSectionIndex(currentSectionIndex - 1);
+      setCurrentQuestionIndex(
+        exam.sections[currentSectionIndex - 1].questions.length - 1
+      );
     }
   };
 
-  // app/exam/[examId]/page.js
-  const submitExam = () => {
-    // ... (calculate score and other results)
-
-    const results = {
-      score: 85, // Example score
-      totalQuestions: 10,
-      correctAnswers: 8,
-      incorrectAnswers: 2,
-      timeTaken: "25:30",
-    };
-
-    localStorage.setItem("examResults", JSON.stringify(results)); // Store results
-
-    router.push("/dashboard"); // Redirect to dashboard
+  const handleMarkForReview = () => {
+    setMarkedForReview({
+      ...markedForReview,
+      [`${currentSectionIndex}-${currentQuestionIndex}`]: true,
+    });
+    handleNextQuestion();
   };
 
+  const handleQuestionNavigation = (sectionIdx, questionIdx) => {
+    setCurrentSectionIndex(sectionIdx);
+    setCurrentQuestionIndex(questionIdx);
+  };
+
+  const submitExam = () => {
+    alert("Exam Submitted");
+    router.push("/dashboard");
+  };
+
+  if (!exam)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        Loading...
+      </div>
+    );
+
+  const currentSection = exam.sections[currentSectionIndex];
+  const currentQuestion = currentSection.questions[currentQuestionIndex];
+
   return (
-    <div ref={examContainerRef} className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">{exam.name}</h1>
+    <div className="flex h-screen bg-gray-100 p-4">
+      {currentSection.title === "MCQs" ? (
+        <>
+          <main className="w-3/4 bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-semibold">
+                {currentSection.title} - Q{currentQuestionIndex + 1}
+              </h2>
+              <p className="text-lg font-semibold">
+                Time: {Math.floor(timeLeft / 60)}:
+                {(timeLeft % 60).toString().padStart(2, "0")}
+              </p>
+            </div>
+            <p className="mb-4">{currentQuestion.text}</p>
+            {currentQuestion.options.map((option, idx) => (
+              <label
+                key={idx}
+                className="flex items-center p-3 border rounded-lg mb-2 cursor-pointer bg-gray-100 hover:bg-gray-200"
+              >
+                <input
+                  type="radio"
+                  name={`question-${currentSectionIndex}-${currentQuestionIndex}`}
+                  value={option}
+                  onChange={() => handleAnswerChange(option)}
+                  checked={
+                    answers[
+                      `${currentSectionIndex}-${currentQuestionIndex}`
+                    ] === option
+                  }
+                  className="mr-3"
+                />
+                {option}
+              </label>
+            ))}
+            <div className="flex justify-between mt-6">
+              <button
+                onClick={handlePreviousQuestion}
+                disabled={
+                  currentQuestionIndex === 0 && currentSectionIndex === 0
+                }
+                className="px-4 py-2 rounded-md bg-gray-300 text-gray-700 disabled:opacity-50"
+              >
+                Previous
+              </button>
+              <button
+                onClick={handleMarkForReview}
+                className="px-4 py-2 rounded-md bg-green-500 text-white"
+              >
+                Save & Next
+              </button>
+            </div>
+          </main>
+          <aside className="w-1/4 p-4 bg-white shadow-md border border-gray-200 rounded-lg ml-4">
+            <h3 className="text-lg font-semibold mb-3">Questions</h3>
 
-      <p className="text-lg text-gray-800 mb-4">
-        Time Left: {Math.floor(timeLeft / 60)}:
-        {(timeLeft % 60).toString().padStart(2, "0")}
-      </p>
+            {exam.sections.map((section, sIdx) => (
+              <div key={sIdx} className="mb-4">
+                <h4 className="text-md font-semibold mb-2 text-blue-600">
+                  {section.title}
+                </h4>
+                <div className="grid grid-cols-5 gap-2">
+                  {section.questions.map((_, qIdx) => {
+                    const key = `${sIdx}-${qIdx}`;
+                    const isAnswered = answers[key];
+                    const isMarked = markedForReview[key];
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => handleQuestionNavigation(sIdx, qIdx)}
+                        className={`p-3 w-12 h-12 rounded-lg font-semibold transition-all
+                ${
+                  isMarked
+                    ? "bg-purple-500 text-white"
+                    : isAnswered
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-300 text-black hover:bg-gray-400"
+                }`}
+                      >
+                        {qIdx + 1}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
 
-      <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-        <p className="text-xl font-semibold mb-4">
-          Question {currentQuestionIndex + 1}: {currentQuestion.text}
-        </p>
-        {currentQuestion.options.map((option) => (
-          <label key={option} className="block mb-2">
-            <input
-              type="radio"
-              name={`question-${currentQuestion.id}`}
-              value={option}
-              onChange={() => handleAnswerChange(option)}
-              checked={answers[currentQuestion.id] === option}
+            <p className="mt-4 text-red-500 font-semibold">
+              Unattempted Questions:
+              {exam.sections.reduce(
+                (acc, sec, sIdx) =>
+                  acc +
+                  sec.questions.filter((_, qIdx) => !answers[`${sIdx}-${qIdx}`])
+                    .length,
+                0
+              )}
+            </p>
+          </aside>
+        </>
+      ) : (
+        <>
+          {currentSection.title === "Coding" && (
+            <CodingSection
+              question={currentQuestion}
+              onNext={handleNextQuestion}
+              onPrevious={handlePreviousQuestion}
+              answers={answers}
+              setAnswers={setAnswers}
+              questionIndex={currentQuestionIndex}
+              sectionIndex={currentSectionIndex}
+              onFinalSubmit={submitExam} // Pass final submit function
+              isLastQuestion={
+                currentSectionIndex === exam.sections.length - 1 &&
+                currentQuestionIndex === currentSection.questions.length - 1
+              }
             />
-            {option}
-          </label>
-        ))}
-      </div>
-
-      <div className="flex justify-between mt-6">
-        <button
-          onClick={handlePreviousQuestion}
-          disabled={currentQuestionIndex === 0}
-          className="bg-gray-300 text-gray-800 py-2 px-4 rounded-md disabled:opacity-50"
-        >
-          Previous
-        </button>
-        <button
-          onClick={handleNextQuestion}
-          disabled={currentQuestionIndex === exam.questions.length - 1}
-          className="bg-blue-600 text-white py-2 px-4 rounded-md disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-
-      <button
-        onClick={submitExam}
-        className="mt-6 bg-green-600 text-white py-2 px-4 rounded-md"
-      >
-        Submit Exam
-      </button>
+          )}
+        </>
+      )}
     </div>
   );
 }
