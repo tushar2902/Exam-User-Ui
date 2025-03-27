@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 
 export default function CodingSection({
@@ -14,10 +14,36 @@ export default function CodingSection({
   onFinalSubmit,
 }) {
   const [language, setLanguage] = useState("javascript");
-  const [code, setCode] = useState(answers[`${sectionIndex}-${questionIndex}`] || "");
+  const [code, setCode] = useState(
+    answers[`${sectionIndex}-${questionIndex}`] || ""
+  );
   const [output, setOutput] = useState("Output will appear here...");
   const [isRunning, setIsRunning] = useState(false);
   const [testResults, setTestResults] = useState([]);
+  const [timeLeft, setTimeLeft] = useState(2700); // 45 minutes (2700 seconds)
+
+  // ⏳ Timer Effect
+  useEffect(() => {
+    if (timeLeft <= 0) {
+      handleAutoSubmit(); // Auto-submit when time runs out
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  // 🎯 Format Timer (MM:SS)
+  const formatTime = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${secs
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   const handleRunCode = async () => {
     setIsRunning(true);
@@ -27,15 +53,28 @@ export default function CodingSection({
     setTimeout(() => {
       setOutput("Execution Output will appear here...");
       setTestResults([
-        { input: "Test 1", expected: "Output 1", actual: "Output 1", passed: true },
-        { input: "Test 2", expected: "Output 2", actual: "Wrong Output", passed: false },
+        {
+          input: "Test 1",
+          expected: "Output 1",
+          actual: "Output 1",
+          passed: true,
+        },
+        {
+          input: "Test 2",
+          expected: "Output 2",
+          actual: "Wrong Output",
+          passed: false,
+        },
       ]);
       setIsRunning(false);
     }, 2000);
   };
 
   const handleSubmitSolution = () => {
-    setAnswers({ ...answers, [`${sectionIndex}-${questionIndex}`]: code || "" });
+    setAnswers({
+      ...answers,
+      [`${sectionIndex}-${questionIndex}`]: code || "",
+    });
     alert("Solution submitted!");
 
     if (isLastQuestion) {
@@ -47,7 +86,10 @@ export default function CodingSection({
 
   const handleCodeChange = (value) => {
     setCode(value || "");
-    setAnswers({ ...answers, [`${sectionIndex}-${questionIndex}`]: value || "" });
+    setAnswers({
+      ...answers,
+      [`${sectionIndex}-${questionIndex}`]: value || "",
+    });
   };
 
   return (
@@ -55,10 +97,13 @@ export default function CodingSection({
       {/* Left Panel - Question & Editor */}
       <div className="w-1/2 bg-white p-4 rounded-lg shadow-md">
         <h2 className="text-xl font-semibold mb-4">{question.text}</h2>
+        <div className="text-lg font-bold text-black bg-gray-200 px-3 py-1 rounded">
+          ⏳ {formatTime(timeLeft)}
+        </div>
         <select
           value={language}
           onChange={(e) => setLanguage(e.target.value)}
-          className="mb-4 p-2 border rounded-lg"
+          className="m-4 p-2 border rounded-lg"
         >
           <option value="javascript">JavaScript</option>
           <option value="python">Python</option>
@@ -83,8 +128,15 @@ export default function CodingSection({
         <h3 className="text-lg font-semibold mt-4">Test Cases</h3>
         <ul className="bg-white p-2 rounded-lg">
           {testResults.map((test, index) => (
-            <li key={index} className={`p-2 ${test.passed ? "text-green-600" : "text-red-600"}`}>
-              <strong>Input:</strong> {test.input} | <strong>Expected:</strong> {test.expected} | <strong>Actual:</strong> {test.actual} | <strong>{test.passed ? "✅ Passed" : "❌ Failed"}</strong>
+            <li
+              key={index}
+              className={`p-2 ${
+                test.passed ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              <strong>Input:</strong> {test.input} | <strong>Expected:</strong>{" "}
+              {test.expected} | <strong>Actual:</strong> {test.actual} |{" "}
+              <strong>{test.passed ? "✅ Passed" : "❌ Failed"}</strong>
             </li>
           ))}
         </ul>
