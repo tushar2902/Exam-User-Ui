@@ -15,6 +15,7 @@ import { FaEdit, FaClock, FaChartBar, FaBullhorn, FaTrophy } from "react-icons/f
 import { FiAlertCircle } from "react-icons/fi";
 import { motion } from "framer-motion";
 
+// Register ChartJS components
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -26,7 +27,31 @@ ChartJS.register(
   PointElement
 );
 
-export default function StudentDashboard() {
+// StatCard component remains the same
+function StatCard({ icon, title, value, detail, trend, color, delay = 0 }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, delay }}
+      className={`p-5 rounded-xl shadow-sm border border-gray-200 bg-white hover:shadow-md transition-all`}
+    >
+      <div className="flex items-start justify-between">
+        <div className={`p-3 rounded-lg ${color} shadow-md`}>
+          {icon}
+        </div>
+      </div>
+      <div className="mt-4">
+        <h3 className="text-sm font-medium text-gray-500">{title}</h3>
+        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+        {detail && <p className="text-sm text-gray-500 mt-1">{detail}</p>}
+        {trend && <p className="text-xs text-emerald-600 mt-2">{trend}</p>}
+      </div>
+    </motion.div>
+  );
+}
+
+export default function DashboardPage() {
   // Replace with actual student data fetching
   const studentName = "John Doe";
   const examsTaken = 5;
@@ -256,29 +281,5 @@ export default function StudentDashboard() {
         </button>
       </div>
     </div>
-  );
-}
-
-// Enhanced StatCard Component
-function StatCard({ icon, title, value, detail, trend, color, delay = 0 }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay }}
-      className={`p-5 rounded-xl shadow-sm border border-gray-200 bg-white hover:shadow-md transition-all`}
-    >
-      <div className="flex items-start justify-between">
-        <div className={`p-3 rounded-lg ${color} shadow-md`}>
-          {icon}
-        </div>
-      </div>
-      <div className="mt-4">
-        <h3 className="text-sm font-medium text-gray-500">{title}</h3>
-        <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-        {detail && <p className="text-sm text-gray-500 mt-1">{detail}</p>}
-        {trend && <p className="text-xs text-emerald-600 mt-2">{trend}</p>}
-      </div>
-    </motion.div>
   );
 }
