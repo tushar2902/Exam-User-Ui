@@ -1,4 +1,4 @@
-'use client';
+"use client";
 import {
   FaUserGraduate,
   FaBookOpen,
@@ -6,12 +6,10 @@ import {
   FaChartBar,
   FaCog,
   FaSignOutAlt,
-  FaBars,
-  FaTimes,
 } from "react-icons/fa";
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter, usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import Link from 'next/link';
+import Link from "next/link";
 
 export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
   const router = useRouter();
@@ -27,8 +25,8 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
     };
 
     handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, [setSidebarOpen]);
 
   const closeSidebar = () => {
@@ -39,15 +37,15 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
 
   function SidebarItem({ icon, title, href }) {
     const isActive = pathname === href;
-    
+
     return (
       <Link
         href={href}
         onClick={closeSidebar}
         className={`flex items-center gap-4 p-3 rounded-lg w-full text-left font-medium transition-all duration-200 ease-in-out ${
-          isActive 
-            ? 'bg-emerald-700 text-white shadow-lg transform scale-[1.02]' 
-            : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+          isActive
+            ? "bg-emerald-700 text-white shadow-lg transform scale-[1.02]"
+            : "text-gray-300 hover:bg-gray-800 hover:text-white"
         }`}
         aria-current={isActive ? "page" : undefined}
       >
@@ -66,36 +64,38 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
     >
       <div>
         {/* Logo */}
-        <Link href="/dashboard"><div className="text-3xl font-extrabold text-center mb-8 p-4">
-          ExamPortal
-        </div></Link>
+        <Link href="/dashboard">
+          <div className="text-3xl font-extrabold text-center mb-8 p-4">
+            ExamPortal
+          </div>
+        </Link>
 
         {/* Navigation */}
         <nav className="flex flex-col space-y-2 p-4">
-          <SidebarItem 
-            icon={<FaUserGraduate />} 
-            title="Dashboard" 
-            href="/dashboard" 
+          <SidebarItem
+            icon={<FaUserGraduate />}
+            title="Dashboard"
+            href="/dashboard"
           />
-          <SidebarItem 
-            icon={<FaBookOpen />} 
-            title="Available Exams" 
-            href="/dashboard/available-exams" 
+          <SidebarItem
+            icon={<FaBookOpen />}
+            title="Available Exams"
+            href="/dashboard/available-exams"
           />
-          <SidebarItem 
-            icon={<FaCheckCircle />} 
-            title="My Exams" 
-            href="/dashboard/my-exams" 
+          <SidebarItem
+            icon={<FaCheckCircle />}
+            title="My Exams"
+            href="/dashboard/my-exams"
           />
-          <SidebarItem 
-            icon={<FaChartBar />} 
-            title="My Results" 
-            href="/dashboard/result" 
+          <SidebarItem
+            icon={<FaChartBar />}
+            title="My Results"
+            href="/dashboard/result"
           />
-          <SidebarItem 
-            icon={<FaCog />} 
-            title="Settings" 
-            href="/dashboard/settings" 
+          <SidebarItem
+            icon={<FaCog />}
+            title="Settings"
+            href="/dashboard/settings"
           />
         </nav>
       </div>
@@ -113,7 +113,7 @@ export default function Sidebar({ sidebarOpen, setSidebarOpen }) {
         </div>
         <button
           className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all duration-200 text-sm font-medium"
-          onClick={() => router.push('/')}
+          onClick={() => router.push("/")}
           aria-label="Logout"
         >
           <FaSignOutAlt /> Sign Out
