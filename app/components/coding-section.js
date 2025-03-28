@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import Editor from "@monaco-editor/react";
+import { FaPlay, FaChevronLeft, FaChevronRight, FaCheck, FaFlag } from "react-icons/fa";
+import { motion } from "framer-motion";
 
 export default function CodingSection({
   question,
@@ -12,71 +14,88 @@ export default function CodingSection({
   sectionIndex,
   isLastQuestion,
   onFinalSubmit,
+  timeLeft
 }) {
-  const [language, setLanguage] = useState("javascript");
-  const [code, setCode] = useState(
-    answers[`${sectionIndex}-${questionIndex}`] || ""
+  const [language, setLanguage] = useState(
+    question.text.includes("Python") ? "python" : "javascript"
   );
-  const [output, setOutput] = useState("Output will appear here...");
+  const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [testResults, setTestResults] = useState([]);
-  const [timeLeft, setTimeLeft] = useState(2700); // 45 minutes (2700 seconds)
+  const [isMarked, setIsMarked] = useState(false);
+  const [windowSize, setWindowSize] = useState({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1200,
+    height: typeof window !== 'undefined' ? window.innerHeight : 800
+  });
 
-  // ⏳ Timer Effect
+  const code = answers[`${sectionIndex}-${questionIndex}`] || question.starterCode || "";
+
   useEffect(() => {
-    if (timeLeft <= 0) {
-      handleAutoSubmit(); // Auto-submit when time runs out
-      return;
-    }
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
 
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
-  // 🎯 Format Timer (MM:SS)
   const formatTime = (seconds) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${minutes.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
+    return `${minutes.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   const handleRunCode = async () => {
     setIsRunning(true);
-    setOutput("Running...");
+    setOutput("Executing code...\n\n");
 
-    // Simulating Judge0 API response
-    setTimeout(() => {
-      setOutput("Execution Output will appear here...");
-      setTestResults([
-        {
-          input: "Test 1",
-          expected: "Output 1",
-          actual: "Output 1",
-          passed: true,
-        },
-        {
-          input: "Test 2",
-          expected: "Output 2",
-          actual: "Wrong Output",
-          passed: false,
-        },
-      ]);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    try {
+      const mockResults = question.testCases.map((testCase, index) => {
+        const passed = Math.random() > 0.3;
+        return {
+          input: testCase.input,
+          expected: testCase.output,
+          actual: passed ? testCase.output : "Incorrect output",
+          passed
+        };
+      });
+
+      setTestResults(mockResults);
+      
+      const passedCount = mockResults.filter(r => r.passed).length;
+      const outputText = [
+        `Execution completed.`,
+        `Results: ${passedCount}/${mockResults.length} test cases passed`,
+        ...mockResults.map((r, i) => 
+          `Test ${i+1}: ${r.passed ? '✅ PASSED' : '❌ FAILED'}\n` +
+          `  Input: ${r.input}\n` +
+          `  Expected: ${r.expected}\n` +
+          `  Received: ${r.actual}\n`
+        )
+      ].join('\n');
+
+      setOutput(outputText);
+    } catch (error) {
+      setOutput(`Error executing code:\n${error.message}`);
+      setTestResults([]);
+    } finally {
       setIsRunning(false);
-    }, 2000);
+    }
+  };
+
+  const handleCodeChange = (value) => {
+    setAnswers({
+      ...answers,
+      [`${sectionIndex}-${questionIndex}`]: value || "",
+    });
   };
 
   const handleSubmitSolution = () => {
-    setAnswers({
-      ...answers,
-      [`${sectionIndex}-${questionIndex}`]: code || "",
-    });
-    alert("Solution submitted!");
-
     if (isLastQuestion) {
       onFinalSubmit();
     } else {
@@ -84,84 +103,197 @@ export default function CodingSection({
     }
   };
 
-  const handleCodeChange = (value) => {
-    setCode(value || "");
-    setAnswers({
-      ...answers,
-      [`${sectionIndex}-${questionIndex}`]: value || "",
-    });
+  const handleMarkForReview = () => {
+    setIsMarked(!isMarked);
   };
 
+  // Calculate dynamic heights based on window size
+  const isMobile = windowSize.width < 768;
+  const editorHeight = isMobile ? 300 : Math.max(300, windowSize.height * 0.4);
+  const outputHeight = isMobile ? 200 : Math.max(200, windowSize.height * 0.3);
+
   return (
-    <div className="flex h-screen p-4 w-full">
-      {/* Left Panel - Question & Editor */}
-      <div className="w-1/2 bg-white p-4 rounded-lg shadow-md">
-        <h2 className="text-xl font-semibold mb-4">{question.text}</h2>
-        <div className="text-lg font-bold text-black bg-gray-200 px-3 py-1 rounded">
+    <div className="flex flex-col h-[calc(100vh-64px)] w-full bg-gray-50 overflow-hidden">
+      {/* Header Bar */}
+      <div className="flex justify-between items-center p-3 bg-white border-b border-gray-200">
+        <h2 className="text-lg font-semibold text-gray-800">
+          Question {questionIndex + 1} of {sectionIndex + 1}
+        </h2>
+        <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+          timeLeft < 300 ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'
+        }`}>
           ⏳ {formatTime(timeLeft)}
         </div>
-        <select
-          value={language}
-          onChange={(e) => setLanguage(e.target.value)}
-          className="m-4 p-2 border rounded-lg"
-        >
-          <option value="javascript">JavaScript</option>
-          <option value="python">Python</option>
-        </select>
-        <Editor
-          height="300px"
-          language={language}
-          value={code}
-          onChange={handleCodeChange}
-          theme="vs-dark"
-        />
       </div>
 
-      {/* Right Panel - Output & Actions */}
-      <div className="w-1/2 bg-gray-100 p-4 rounded-lg shadow-md ml-4">
-        <h2 className="text-xl font-semibold mb-4">Output</h2>
-        <textarea
-          readOnly
-          className="w-full p-3 border rounded-lg h-24 bg-white"
-          value={output}
-        />
-        <h3 className="text-lg font-semibold mt-4">Test Cases</h3>
-        <ul className="bg-white p-2 rounded-lg">
-          {testResults.map((test, index) => (
-            <li
-              key={index}
-              className={`p-2 ${
-                test.passed ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              <strong>Input:</strong> {test.input} | <strong>Expected:</strong>{" "}
-              {test.expected} | <strong>Actual:</strong> {test.actual} |{" "}
-              <strong>{test.passed ? "✅ Passed" : "❌ Failed"}</strong>
-            </li>
-          ))}
-        </ul>
-        <div className="flex justify-between mt-4">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Left Panel - Question & Editor */}
+        <div className="flex-1 flex flex-col p-4 bg-white border-b md:border-b-0 md:border-r border-gray-200 overflow-hidden">
+          <div className="mb-2 overflow-y-auto">
+            <h3 className="font-medium text-gray-800 mb-2">Problem Statement:</h3>
+            <p className="text-gray-700 whitespace-pre-wrap text-sm">{question.text}</p>
+            
+            {question.testCases && (
+              <>
+                <h3 className="font-medium text-gray-800 mt-4 mb-2">Test Cases:</h3>
+                <ul className="space-y-2">
+                  {question.testCases.map((testCase, index) => (
+                    <li key={index} className="bg-gray-100 p-2 rounded text-sm">
+                      <div className="font-mono">
+                        <span className="font-medium">Input:</span> {testCase.input}
+                      </div>
+                      <div className="font-mono">
+                        <span className="font-medium">Expected:</span> {testCase.output}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+
+          <div className="mt-auto">
+            <div className="flex justify-between items-center mb-2">
+              <label className="text-sm font-medium text-gray-700">
+                Language:
+              </label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="p-2 border rounded-lg text-sm"
+              >
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+              </select>
+            </div>
+
+            <div className="border rounded-lg overflow-hidden" style={{ height: `${editorHeight}px` }}>
+              <Editor
+                height="100%"
+                language={language}
+                value={code}
+                onChange={handleCodeChange}
+                theme="vs-dark"
+                options={{
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  fontSize: 14,
+                  wordWrap: "on",
+                  automaticLayout: true,
+                  lineNumbers: "on"
+                }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Panel - Output & Results */}
+        <div className="w-full md:w-96 flex flex-col bg-white border-t md:border-t-0 md:border-l border-gray-200">
+          <div className="p-3 border-b border-gray-200">
+            <h2 className="text-md font-semibold text-gray-800">Execution Output</h2>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto" style={{ height: `${outputHeight}px` }}>
+            <pre className="bg-gray-800 text-gray-100 p-3 font-mono text-xs whitespace-pre-wrap overflow-x-auto h-full">
+              {output || "Run your code to see output here..."}
+            </pre>
+          </div>
+
+          <div className="p-3 border-t border-gray-200 overflow-y-auto" style={{ maxHeight: `${outputHeight}px` }}>
+            <h3 className="text-sm font-semibold text-gray-800 mb-2">Test Results</h3>
+            {testResults.length > 0 ? (
+              <div className="space-y-2">
+                {testResults.map((test, index) => (
+                  <motion.div
+                    key={index}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`p-2 rounded-lg text-xs ${
+                      test.passed ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+                    }`}
+                  >
+                    <div className="font-medium flex items-center">
+                      {test.passed ? (
+                        <span className="text-green-600 mr-1">✓</span>
+                      ) : (
+                        <span className="text-red-600 mr-1">✗</span>
+                      )}
+                      Test {index + 1} - {test.passed ? 'Passed' : 'Failed'}
+                    </div>
+                    <div className="mt-1">
+                      <div>Input: <span className="font-mono">{test.input}</span></div>
+                      <div>Expected: <span className="font-mono">{test.expected}</span></div>
+                      {!test.passed && (
+                        <div>Received: <span className="font-mono">{test.actual}</span></div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-gray-500 text-xs">No test results yet</p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons - Fixed at bottom */}
+      <div className="bg-gray-50 border-t border-gray-200 p-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <button
+            onClick={onPrevious}
+            className="flex items-center justify-center p-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg text-sm"
+          >
+            <FaChevronLeft className="mr-1" />
+            <span className="truncate">Previous</span>
+          </button>
+
           <button
             onClick={handleRunCode}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg"
             disabled={isRunning}
+            className={`flex items-center justify-center p-2 rounded-lg text-sm ${
+              isRunning
+                ? 'bg-blue-400 text-white cursor-not-allowed'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
           >
-            {isRunning ? "Running..." : "Run Code"}
+            <FaPlay className="mr-1" />
+            <span className="truncate">{isRunning ? 'Running...' : 'Run Code'}</span>
           </button>
-          <div>
-            <button
-              onClick={onPrevious}
-              className="px-4 py-2 bg-gray-500 text-white rounded-lg mr-2"
-            >
-              Previous
-            </button>
-            <button
-              onClick={handleSubmitSolution}
-              className="px-4 py-2 bg-green-500 text-white rounded-lg"
-            >
-              {isLastQuestion ? "Final Submit" : "Submit Solution"}
-            </button>
-          </div>
+
+          <button
+            onClick={handleMarkForReview}
+            className={`flex items-center justify-center p-2 rounded-lg text-sm ${
+              isMarked
+                ? 'bg-purple-600 hover:bg-purple-700 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+            }`}
+          >
+            <FaFlag className="mr-1" />
+            <span className="truncate">{isMarked ? 'Marked' : 'Mark'}</span>
+          </button>
+
+          <button
+            onClick={handleSubmitSolution}
+            className={`flex items-center justify-center p-2 rounded-lg text-sm ${
+              isLastQuestion
+                ? 'bg-green-600 hover:bg-green-700 text-white'
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+          >
+            {isLastQuestion ? (
+              <>
+                <FaCheck className="mr-1" />
+                <span className="truncate">Submit Exam</span>
+              </>
+            ) : (
+              <>
+                <FaChevronRight className="mr-1" />
+                <span className="truncate">Next Question</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>
